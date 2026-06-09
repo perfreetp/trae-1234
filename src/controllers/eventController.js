@@ -1,5 +1,6 @@
 const { db, createEventId, generateId } = require('../data/database');
 const { success, fail, notFound, paginate, isWithinRadius, generateCirclePoints, calculateDistance } = require('../utils/response');
+const { markDirty } = require('../utils/persist');
 
 const listEvents = (req, res) => {
   const { type, level, status, keyword, page = 1, pageSize = 20 } = req.query;
@@ -67,7 +68,7 @@ const reportEvent = (req, res) => {
     description: `${req.user?.name || '系统'} 上报了突发事件: ${title}`,
     data: { source: 'manual_report' }
   }];
-
+  markDirty();
   return success(res, { event }, '事件上报成功');
 };
 
@@ -85,6 +86,7 @@ const updateEvent = (req, res) => {
     description: `事件信息已更新`,
     data: req.body
   });
+  markDirty();
   return success(res, { event: db.emergencyEvents[idx] }, '更新成功');
 };
 
@@ -107,6 +109,7 @@ const addTimeline = (req, res) => {
     data: data || {}
   };
   db.eventTimelines[req.params.id].push(item);
+  markDirty();
   return success(res, { item }, '时间线已添加');
 };
 

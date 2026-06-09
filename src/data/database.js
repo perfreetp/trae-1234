@@ -1,5 +1,7 @@
 const { v4: uuidv4 } = require('uuid');
 const bcrypt = require('bcryptjs');
+const fs = require('fs');
+const path = require('path');
 
 const generateId = () => uuidv4().replace(/-/g, '').substring(0, 16);
 
@@ -257,9 +259,112 @@ const db = {
   }
 };
 
+const PERSISTENT_KEYS = ['keyPlaces', 'emergencyEvents', 'eventTimelines', 'tasks', 'notifications'];
+const RUNTIME_FILE = path.resolve(__dirname, '..', '..', 'data', 'runtime-data.json');
+let dirty = false;
+let saveTimer = null;
+let intervalTimer = null;
+
+const ensureDataDir = () => {
+  const dir = path.dirname(RUNTIME_FILE);
+  if (!fs.existsSync(dir)) {
+    try { fs.mkdirSync(dir, { recursive: true }); } catch (_) {}
+  }
+};
+
+const saveRuntimeDataSync = () => {
+  try {
+    ensureDataDir();
+    const payload = {};
+    PERSISTENT_KEYS.forEach(k => { payload[k] = db[k]; });
+    fs.writeFileSync(RUNTIME_FILE, JSON.stringify(payload, null, 2), 'utf8');
+    dirty = false;
+    return true;
+  } catch (e) {
+    console.error('[持久化] 保存失败:', e.message);
+    return false;
+  }
+};
+
+const saveRuntimeData = (immediate = false) => {
+  if (immediate) {
+    if (saveTimer) clearTimeout(saveTimer);
+    saveTimer = null;
+    return saveRuntimeDataSync();
+  }
+  if (!saveTimer) {
+    saveTimer = setTimeout(() => {
+      saveRuntimeDataSync();
+      saveTimer = null;
+    }, 400);
+  }
+};
+
+const markDirty = () => {
+  dirty = true;
+  saveRuntimeData(false);
+};
+
+const loadRuntimeData = () => {
+  ensureDataDir();
+  if (fs.existsSync(RUNTIME_FILE)) {
+    try {
+      const raw = fs.readFileSync(RUNTIME_FILE, 'utf8');
+      const payload = JSON.parse(raw);
+      PERSISTENT_KEYS.forEach(k => {
+        if (payload[k]) {
+          db[k] = payload[k];
+        }
+      });
+      console.log('[持久化] 已加载运行数据:', RUNTIME_FILE);
+      console.log('  事件:', db.emergencyEvents.length, ' 任务:', db.tasks.length, ' 场所:', db.keyPlaces.length, ' 通知:', db.notifications.length);
+      return true;
+    } catch (e) {
+      console.error('[持久化] 加载失败:', e.message);
+      return false;
+    }
+  }
+  return false;
+};
+
+const setupPersistence = () => {
+  loadRuntimeData();
+  intervalTimer = setInterval(() => {
+    if (dirty) saveRuntimeDataSync();
+  }, 4000);
+  intervalTimer.unref && intervalTimer.unref();
+
+  const cleanup = () => {
+    try { saveRuntimeDataSync(); } catch (_) {}
+  };
+  process.on('SIGINT', () => { cleanup(); process.exit(0); });
+  process.on('SIGTERM', () => { cleanup(); process.exit(0); });
+  process.on('beforeExit', cleanup);
+  process.on('uncaughtException', (e) => { try { cleanup(); } catch (_) {} });
+  console.log('[持久化] 已启用. 文件:', RUNTIME_FILE);
+};
+
+const resetRuntimeData = () => {
+  try {
+    if (fs.existsSync(RUNTIME_FILE)) {
+      fs.unlinkSync(RUNTIME_FILE);
+    }
+    console.log('[持久化] 已重置运行数据');
+    return true;
+  } catch (e) {
+    console.error('[持久化] 重置失败:', e.message);
+    return false;
+  }
+};
+
 module.exports = {
   db,
   generateId,
   createEventId,
-  createTaskId
+  createTaskId,
+  setupPersistence,
+  loadRuntimeData,
+  saveRuntimeData: (immediate) => { dirty = true; saveRuntimeData(immediate); },
+  markDirty,
+  resetRuntimeData
 };

@@ -1,5 +1,6 @@
 const { db, generateId } = require('../data/database');
 const { success, notFound, paginate } = require('../utils/response');
+const { markDirty } = require('../utils/persist');
 
 const listNotifications = (req, res) => {
   const { eventId, type, status, page = 1, pageSize = 20 } = req.query;
@@ -51,7 +52,7 @@ const sendNotification = (req, res) => {
     notification.status = 'sent';
     notification.readCount = Math.floor(notification.totalCount * (0.3 + Math.random() * 0.5));
   }, 2000);
-
+  markDirty();
   return success(res, { notification }, '通知已发送');
 };
 
@@ -104,7 +105,7 @@ const notifyDepartmentsForEvent = (req, res) => {
     description: `已通知 ${results.length} 个部门: ${departments.join('、')}`,
     data: { departments, results }
   });
-
+  markDirty();
   return success(res, { eventId: event.id, notifiedCount: results.length, results, recipients });
 };
 

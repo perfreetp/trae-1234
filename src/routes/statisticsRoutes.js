@@ -4,9 +4,9 @@ const { authenticate, authorize } = require('../middleware/auth');
 
 const router = express.Router();
 
-router.get('/overview', authenticate, ctrl.overview);
-router.get('/events', authenticate, ctrl.eventStatistics);
-router.get('/disposal', authenticate, ctrl.disposalStatistics);
-router.get('/command-dashboard', authenticate, ctrl.commandDashboard);
+router.get('/overview', authenticate, authorize('statistics:view'), ctrl.overview);
+router.get('/events', authenticate, authorize('statistics:view'), ctrl.eventStatistics);
+router.get('/disposal', authenticate, authorize('statistics:view'), ctrl.disposalStatistics);
+router.get('/command-dashboard', authenticate, authorize('statistics:view'), ctrl.commandDashboard);
 
 module.exports = router;

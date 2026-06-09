@@ -19,9 +19,47 @@ const verifyToken = (token) => {
 
 const ROLE_HIERARCHY = {
   ADMIN: ['*'],
-  COMMANDER: ['event:*', 'task:*', 'resource:*', 'plan:*', 'notification:*', 'statistics:view', 'command:*', 'city-object:view', 'place:view', 'sensor:view', 'location:view', 'evacuation:view'],
-  STREET: ['event:view', 'event:create', 'task:view', 'task:update', 'notification:view', 'place:view', 'city-object:view', 'sensor:view', 'location:view', 'evacuation:view', 'statistics:view'],
-  PATROL: ['event:create', 'event:view', 'task:view', 'task:update', 'place:view', 'city-object:view', 'sensor:view', 'location:view']
+  COMMANDER: [
+    'event:view', 'event:create', 'event:update', 'event:close', 'event:timeline',
+    'task:view', 'task:create', 'task:update', 'task:accept',
+    'resource:view', 'resource:manage',
+    'plan:view', 'plan:create', 'plan:match',
+    'notification:view', 'notification:create', 'notification:send',
+    'statistics:view',
+    'command:context', 'command:action', 'command:progress',
+    'city-object:view', 'city-object:create', 'city-object:update', 'city-object:delete',
+    'place:view', 'place:create', 'place:update',
+    'sensor:view', 'location:view', 'evacuation:view',
+    'user:view', 'auth:manage'
+  ],
+  STREET: [
+    'event:view', 'event:create', 'event:timeline',
+    'task:view', 'task:update', 'task:accept',
+    'resource:view', 'plan:view',
+    'notification:view',
+    'statistics:view',
+    'command:context', 'command:progress',
+    'city-object:view', 'place:view',
+    'sensor:view', 'location:view', 'evacuation:view'
+  ],
+  PATROL: [
+    'event:view',
+    'task:view', 'task:update', 'task:accept',
+    'command:progress',
+    'place:view', 'city-object:view',
+    'sensor:view', 'location:view'
+  ]
+};
+
+const COMMAND_ACTION_PERMISSIONS = {
+  MATCH_PLAN: 'command:action',
+  DISPATCH_FIRE: 'task:create',
+  DISPATCH_MEDICAL: 'task:create',
+  DISPATCH_TRAFFIC: 'task:create',
+  NOTIFY_DEPTS: 'notification:send',
+  ASSIGN_COMMANDER: 'command:action',
+  UPGRADE_LEVEL: 'event:update',
+  CLOSE_EVENT: 'event:close'
 };
 
 const hasPermission = (user, permission) => {
@@ -100,5 +138,6 @@ module.exports = {
   authorize,
   authenticateOptional,
   hasPermission,
-  ROLE_HIERARCHY
+  ROLE_HIERARCHY,
+  COMMAND_ACTION_PERMISSIONS
 };

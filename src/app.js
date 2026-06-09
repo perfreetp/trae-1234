@@ -4,6 +4,9 @@ const dotenv = require('dotenv');
 
 dotenv.config();
 
+const { setupPersistence } = require('./data/database');
+setupPersistence();
+
 const authRoutes = require('./routes/authRoutes');
 const cityObjectRoutes = require('./routes/cityObjectRoutes');
 const placeRoutes = require('./routes/placeRoutes');

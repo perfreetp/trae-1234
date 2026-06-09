@@ -1,5 +1,6 @@
 const { db, generateId } = require('../data/database');
 const { success, fail, notFound, paginate, isWithinRadius } = require('../utils/response');
+const { markDirty } = require('../utils/persist');
 
 const listPlaces = (req, res) => {
   const { keyword, category, level, lat, lng, radius, page = 1, pageSize = 50 } = req.query;
@@ -42,6 +43,7 @@ const registerPlace = (req, res) => {
     createdAt: new Date().toISOString()
   };
   db.keyPlaces.push(place);
+  markDirty();
   return success(res, { place }, '重点场所登记成功');
 };
 
@@ -49,6 +51,7 @@ const updatePlace = (req, res) => {
   const idx = db.keyPlaces.findIndex(p => p.id === req.params.id);
   if (idx === -1) return notFound(res, '重点场所不存在');
   db.keyPlaces[idx] = { ...db.keyPlaces[idx], ...req.body, updatedAt: new Date().toISOString() };
+  markDirty();
   return success(res, { place: db.keyPlaces[idx] }, '更新成功');
 };
 

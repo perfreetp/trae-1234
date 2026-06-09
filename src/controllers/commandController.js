@@ -1,5 +1,7 @@
 const { db, generateId, createTaskId } = require('../data/database');
-const { success, fail, notFound } = require('../utils/response');
+const { success, fail, notFound, generateCirclePoints, isWithinRadius, calculateDistance } = require('../utils/response');
+const { hasPermission, COMMAND_ACTION_PERMISSIONS } = require('../middleware/auth');
+const { markDirty } = require('../utils/persist');
 
 const getCommandContext = (req, res) => {
   const event = db.emergencyEvents.find(e => e.id === req.params.eventId);
@@ -142,6 +144,18 @@ const executeAction = (req, res) => {
   const { eventId, action, params } = req.body;
   const event = db.emergencyEvents.find(e => e.id === eventId);
   if (!event) return notFound(res, '事件不存在');
+
+  const requiredPerm = COMMAND_ACTION_PERMISSIONS[action];
+  if (requiredPerm && !hasPermission(req.user, requiredPerm)) {
+    return res.status(403).json({
+      code: 403,
+      message: '权限不足，无法执行该指挥动作',
+      action,
+      requiredPermission: requiredPerm,
+      userRole: req.user?.role,
+      user: req.user?.name
+    });
+  }
 
   const actor = req.user?.id || 'system';
   const actorName = req.user?.name || '系统';
@@ -303,6 +317,7 @@ const executeAction = (req, res) => {
 
   event.updatedAt = now;
   const tasks = db.tasks.filter(t => t.eventId === eventId);
+  markDirty();
   return success(res, { event, results, action, tasks });
 };
 
@@ -341,8 +356,284 @@ const reportProgress = (req, res) => {
   });
   event.updatedAt = now;
   updates.push({ type: 'timeline', message: '现场进展已记录' });
-
+  markDirty();
   return success(res, { event, updates });
 };
 
-module.exports = { getCommandContext, executeAction, reportProgress };
+const getDeepPackage = (req, res) => {
+  const eventId = req.params.eventId;
+  const event = db.emergencyEvents.find(e => e.id === eventId);
+  if (!event) return notFound(res, '事件不存在');
+
+  const center = event.location;
+  const radius = event.impactRadius || 500;
+
+  const timeline = (db.eventTimelines[eventId] || []).slice().sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+  const tasks = db.tasks.filter(t => t.eventId === eventId);
+  const notifications = db.notifications.filter(n => n.eventId === eventId);
+
+  const relatedObject = event.objectId
+    ? (db.cityObjects.find(o => o.id === event.objectId) || db.keyPlaces.find(p => p.id === event.objectId))
+    : null;
+  const relatedSensors = event.objectId ? db.sensors.filter(s => s.objectId === event.objectId) : [];
+
+  const affectedObjects = db.cityObjects.filter(o => o.location && isWithinRadius(o.location, center, radius));
+  const affectedPlaces = db.keyPlaces.filter(p => p.location && isWithinRadius(p.location, center, radius));
+  const affectedSensors = db.sensors.filter(s => s.location && isWithinRadius({ lat: s.location.lat, lng: s.location.lng }, center, radius));
+  const affectedHeat = db.heatmapData.grids.filter(g => isWithinRadius({ lat: g.lat, lng: g.lng }, center, radius * 2));
+  const estimatedAffectedPeople = affectedHeat.reduce((s, g) => s + g.peopleCount, 0);
+
+  const impactAssessment = {
+    center,
+    radius,
+    perimeter: generateCirclePoints(center, radius),
+    affectedObjects,
+    affectedPlaces,
+    affectedSensors,
+    affectedPeople: estimatedAffectedPeople,
+    affectedHeatSnapshot: affectedHeat,
+    zones: [
+      { name: '核心危险区', radius: radius, color: '#ff4d4f', opacity: 0.35 },
+      { name: '缓冲警戒区', radius: Math.round(radius * 1.5), color: '#faad14', opacity: 0.2 },
+      { name: '影响观察区', radius: Math.round(radius * 2.5), color: '#52c41a', opacity: 0.12 }
+    ]
+  };
+
+  const nearbyResources = db.resources
+    .filter(r => r.location)
+    .map(r => ({ ...r, distance: calculateDistance(r.location, center) }))
+    .filter(r => r.distance < 10000)
+    .sort((a, b) => a.distance - b.distance)
+    .slice(0, 20);
+
+  const matchingPlans = db.plans.map(plan => {
+    let score = 0;
+    const reasons = [];
+    if (plan.type === event.type) { score += 40; reasons.push('类型匹配'); }
+    if (plan.applicableLevels.includes(event.level)) { score += 25; reasons.push('等级匹配'); }
+    if (relatedObject) {
+      const hit = (plan.applicableScenarios || []).some(sc => {
+        const s = sc.toLowerCase();
+        const d = (relatedObject.description || relatedObject.name || '').toLowerCase();
+        if (d.includes(s)) return true;
+        if (relatedObject.floors > 20 && s.includes('高层')) return true;
+        if (relatedObject.type === 'mall' && s.includes('商业')) return true;
+        return false;
+      });
+      if (hit) { score += 20; reasons.push('场景特征匹配'); }
+    }
+    if (score >= 50) score += 15;
+    return {
+      plan,
+      score: Math.min(score, 100),
+      matchLevel: score >= 80 ? 'high' : score >= 50 ? 'medium' : 'low',
+      reasons,
+      matchedResources: (plan.requiredResources || []).map(rid => db.resources.find(r => r.id === rid)).filter(Boolean)
+    };
+  }).filter(r => r.score > 0).sort((a, b) => b.score - a.score);
+
+  const recommendedPlan = matchingPlans[0] || null;
+
+  const evacuationSuggestion = (() => {
+    const routes = db.evacuationRoutes
+      .map(r => ({ ...r, distanceFromEvent: calculateDistance(r.startPoint, center) }))
+      .filter(r => r.distanceFromEvent < 8000)
+      .sort((a, b) => a.distanceFromEvent - b.distanceFromEvent)
+      .slice(0, 6);
+    const shelters = db.resources
+      .filter(r => r.category === 'shelter' && r.location)
+      .map(r => ({ ...r, distance: calculateDistance(r.location, center) }))
+      .sort((a, b) => a.distance - b.distance)
+      .slice(0, 5);
+    const totalCapacity = routes.reduce((s, r) => s + r.capacity, 0);
+    return { routes, shelters, totalCapacity, peopleNeedEvacuation: Math.max(0, estimatedAffectedPeople - Math.floor(totalCapacity * 0.8)) };
+  })();
+
+  const taskStats = {
+    total: tasks.length,
+    dispatched: tasks.filter(t => t.status === 'dispatched').length,
+    inProgress: tasks.filter(t => t.status === 'in_progress').length,
+    completed: tasks.filter(t => t.status === 'completed').length,
+    cancelled: tasks.filter(t => t.status === 'cancelled').length,
+    avgProgress: tasks.length ? Math.round(tasks.reduce((s, t) => s + t.progress, 0) / tasks.length) : 0,
+    overallStatus: tasks.length === 0 ? '待派发' : tasks.every(t => t.status === 'completed') ? '全部完成' : tasks.some(t => t.status === 'in_progress') ? '处置进行中' : '等待接收'
+  };
+
+  const involvedDepts = (event.departmentIds || []).map(did => {
+    const dept = db.departments.find(d => d.id === did);
+    const deptTasks = tasks.filter(t => t.department === did);
+    return {
+      id: did,
+      name: dept?.name || did,
+      contact: dept?.contact,
+      leader: dept?.dutyLeader,
+      leaderPhone: dept?.phone,
+      onDuty: dept?.onDutyStaff || 0,
+      tasksCount: deptTasks.length,
+      completedTasks: deptTasks.filter(t => t.status === 'completed').length,
+      avgProgress: deptTasks.length ? Math.round(deptTasks.reduce((s, t) => s + t.progress, 0) / deptTasks.length) : 0
+    };
+  });
+
+  const deptMap = {
+    fire: ['消防支队', '急救中心', '交警支队'],
+    gas: ['消防支队', '燃气公司', '交警支队', '街道办'],
+    traffic: ['交警支队', '急救中心'],
+    structural: ['消防支队', '急救中心', '交警支队', '住建局'],
+    chemical: ['消防支队', '急救中心', '环保局', '交警支队'],
+    medical: ['卫健委', '急救中心', '疾控中心', '街道办'],
+    flood: ['水务局', '消防支队', '街道办', '交警支队'],
+    public_order: ['公安局', '街道办', '交警支队']
+  };
+  const suggestedDepts = deptMap[event.type] || deptMap.fire;
+
+  const playbackFrames = (() => {
+    if (timeline.length === 0) return [];
+    const startTime = new Date(timeline[0].timestamp).getTime();
+    const frames = [];
+    for (let i = 0; i < timeline.length; i++) {
+      const t = timeline[i];
+      const time = new Date(t.timestamp);
+      const offset = Math.max(0, Math.floor((time.getTime() - startTime) / 1000));
+      const tasksSnapshot = tasks.filter(ts => new Date(ts.createdAt) <= time);
+      frames.push({
+        index: i + 1,
+        offsetSeconds: offset,
+        timestamp: t.timestamp,
+        timelineEvent: t,
+        tasksSnapshot: tasksSnapshot.map(ts => ({
+          id: ts.id, title: ts.title, type: ts.type, department: ts.department,
+          status: new Date(ts.completedAt || ts.updatedAt || ts.createdAt) <= time ? (ts.status === 'completed' ? 'completed' : ts.acceptedAt && new Date(ts.acceptedAt) <= time ? 'in_progress' : 'dispatched') : 'pending'
+        })),
+        phase: i < 2 ? '接警响应' : i < 4 ? '联动处置' : i < timeline.length - 1 ? '攻坚处置' : '收尾清理'
+      });
+    }
+    return frames;
+  })();
+
+  let durationMinutes = null;
+  if (event.closedAt) durationMinutes = Math.round((new Date(event.closedAt) - new Date(event.createdAt)) / 60000);
+  else durationMinutes = Math.max(1, Math.round((Date.now() - new Date(event.createdAt).getTime()) / 60000));
+
+  const deptMap2 = { fire: 42, traffic: 68, gas: 8, medical: 21, structural: 5, chemical: 3, flood: 6, public_order: 17 };
+  const byLevelCount = { I: 0, II: 0, III: 0, IV: 0 };
+  const byTypeCount = {};
+  db.emergencyEvents.forEach(e => {
+    if (byLevelCount[e.level] !== undefined) byLevelCount[e.level]++;
+    byTypeCount[e.type] = (byTypeCount[e.type] || 0) + 1;
+  });
+
+  const pkg = {
+    _meta: {
+      generatedAt: new Date().toISOString(),
+      eventId,
+      packageVersion: '1.0.0',
+      forClient: ['指挥大屏', '街道值班端', '巡查App'],
+      renderSections: ['事件卡片', '地图图层', '影响评估', '预案匹配', '疏散导航', '任务看板', '部门联动', '时间线', '复盘回放', '统计快照']
+    },
+    event,
+    eventSummary: {
+      id: event.id,
+      title: event.title,
+      type: event.type,
+      level: event.level,
+      status: event.status,
+      phase: event.currentPhase,
+      address: event.address,
+      durationMinutes,
+      location: event.location,
+      tags: event.tags || [],
+      reporter: event.reporter,
+      commander: event.commanderId ? db.users.find(u => u.id === event.commanderId)?.name || null : null,
+      createdAt: event.createdAt,
+      closedAt: event.closedAt
+    },
+    impact: impactAssessment,
+    relatedContext: { relatedObject, relatedSensors },
+    planMatching: {
+      totalMatches: matchingPlans.length,
+      recommended: recommendedPlan,
+      alternatives: matchingPlans.slice(1, 3)
+    },
+    evacuation: evacuationSuggestion,
+    resourceSnapshot: {
+      nearbyCount: nearbyResources.length,
+      nearby: nearbyResources.slice(0, 10),
+      allAvailable: nearbyResources
+    },
+    tasks: {
+      summary: taskStats,
+      list: tasks,
+      byDepartment: Object.fromEntries(
+        Array.from(new Set(tasks.map(t => t.department))).map(dept => [
+          dept,
+          {
+            list: tasks.filter(t => t.department === dept),
+            avgProgress: tasks.filter(t => t.department === dept).length
+              ? Math.round(tasks.filter(t => t.department === dept).reduce((s, t) => s + t.progress, 0) / tasks.filter(t => t.department === dept).length)
+              : 0
+          }
+        ])
+      )
+    },
+    departmentCoordination: {
+      involved: involvedDepts,
+      suggested: suggestedDepts.filter(d => !event.departmentIds?.includes(d)).map(did => {
+        const dept = db.departments.find(d => d.id === did);
+        return { id: did, name: dept?.name || did, contact: dept?.contact, onDuty: dept?.onDutyStaff || 0, notified: false };
+      }),
+      allNotified: suggestedDepts.every(d => event.departmentIds?.includes(d))
+    },
+    notifications: {
+      totalSent: notifications.length,
+      byChannel: {
+        sms: notifications.filter(n => n.channels?.includes('sms')).length,
+        app: notifications.filter(n => n.channels?.includes('app')).length,
+        email: notifications.filter(n => n.channels?.includes('email')).length,
+        broadcast: notifications.filter(n => n.channels?.includes('broadcast')).length
+      },
+      list: notifications.sort((a, b) => new Date(b.sentAt) - new Date(a.sentAt)),
+      readProgress: {
+        total: notifications.reduce((s, n) => s + (n.totalCount || 0), 0),
+        read: notifications.reduce((s, n) => s + (n.readCount || 0), 0)
+      }
+    },
+    timeline: {
+      count: timeline.length,
+      events: timeline,
+      phaseBreakdown: (() => {
+        const phases = {};
+        timeline.forEach(t => {
+          const act = t.action;
+          let phase = '其他';
+          if (act === 'event_created' || act === 'event_verified') phase = '接警响应';
+          else if (act === 'plan_matched' || act === 'plan_activated' || act === 'departments_notified') phase = '联动启动';
+          else if (act.startsWith('task_')) phase = '任务处置';
+          else if (act === 'field_report' || act.includes('progress')) phase = '现场处置';
+          else if (act === 'event_closed' || act.includes('closed')) phase = '处置结束';
+          phases[phase] = (phases[phase] || 0) + 1;
+        });
+        return phases;
+      })()
+    },
+    playback: {
+      totalFrames: playbackFrames.length,
+      totalSeconds: playbackFrames.length > 0 ? playbackFrames[playbackFrames.length - 1].offsetSeconds + 60 : 300,
+      startTime: timeline[0]?.timestamp,
+      endTime: event.closedAt || timeline[timeline.length - 1]?.timestamp,
+      frames: playbackFrames
+    },
+    suggestedActions: _generateSuggestedActions(event, tasks, recommendedPlan?.plan, involvedDepts),
+    statisticsSnapshot: {
+      eventsToday: db.emergencyEvents.filter(e => new Date(e.createdAt).toDateString() === new Date().toDateString()).length,
+      eventsOpen: db.emergencyEvents.filter(e => e.status !== 'closed' && e.status !== 'resolved').length,
+      tasksCompletedToday: db.tasks.filter(t => t.completedAt && new Date(t.completedAt).toDateString() === new Date().toDateString()).length,
+      eventsByType: byTypeCount,
+      eventsByLevel: byLevelCount
+    }
+  };
+
+  return success(res, pkg, `事件 ${eventId} 深度协同包已生成，共 ${pkg._meta.renderSections.length} 个渲染分区`);
+};
+
+module.exports = { getCommandContext, executeAction, reportProgress, getDeepPackage };

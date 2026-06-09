@@ -1,5 +1,6 @@
 const { db, createTaskId, generateId } = require('../data/database');
 const { success, fail, notFound, paginate } = require('../utils/response');
+const { markDirty } = require('../utils/persist');
 
 const listTasks = (req, res) => {
   const { eventId, status, priority, department, assignee, page = 1, pageSize = 20 } = req.query;
@@ -64,7 +65,7 @@ const dispatchTask = (req, res) => {
   event.departmentIds = event.departmentIds || [];
   if (!event.departmentIds.includes(department)) event.departmentIds.push(department);
   event.updatedAt = new Date().toISOString();
-
+  markDirty();
   return success(res, { task }, '任务派发成功');
 };
 
@@ -89,7 +90,7 @@ const acceptTask = (req, res) => {
     description: `任务 ${task.title} 已被 ${task.department} 接收`,
     data: { taskId: task.id }
   });
-
+  markDirty();
   return success(res, { task }, '任务已接收');
 };
 
@@ -125,7 +126,7 @@ const updateProgress = (req, res) => {
     description: `${task.department} [${task.title}] 进展: ${task.progress}%${description ? ' - ' + description : ''}`,
     data: { taskId: task.id, progress: task.progress, status: task.status }
   });
-
+  markDirty();
   return success(res, { task }, '进展已更新');
 };
 
