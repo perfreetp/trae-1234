@@ -25,6 +25,7 @@ const getRelatedStreetsForEvent = (event) => {
     });
   }
   (event.departmentIds || []).forEach(d => {
+    if (d.includes('街道办') || d.includes('街道')) streets.add(d);
     (STREET_DEPT_MAP[d] || []).forEach(s => streets.add(s));
   });
   (event.tags || []).forEach(t => {
@@ -33,6 +34,15 @@ const getRelatedStreetsForEvent = (event) => {
     });
   });
   return Array.from(streets);
+};
+
+const isStreetRelatedToEvent = (event, street) => {
+  if (!event || !street) return false;
+  const related = getRelatedStreetsForEvent(event);
+  if (related.includes(street)) return true;
+  if (event.createdBy && event.reporterDept === street) return true;
+  if ((event.departmentIds || []).includes(street)) return true;
+  return false;
 };
 
 const getStreetLedger = (req, res) => {
@@ -78,6 +88,59 @@ const getStreetLedger = (req, res) => {
       myTasksCompleted: db.tasks.filter(t => t.department === userStreet && t.status === 'completed').length
     }
   }, `街道[${userStreet}]台账加载成功`);
+};
+
+const getStreetEventDetail = (req, res) => {
+  const userStreet = getUserStreet(req.user);
+  const { eventId } = req.params;
+
+  const event = db.emergencyEvents.find(e => e.id === eventId);
+  if (!event) return notFound(res, '事件不存在');
+
+  if (!isStreetRelatedToEvent(event, userStreet)) {
+    return fail(res, 403, '您所在的街道无权查看此事件的详情');
+  }
+
+  const myTasks = db.tasks.filter(t => {
+    if (t.eventId !== eventId) return false;
+    return t.department === userStreet || t.assigneeDepartment === userStreet;
+  });
+  const allTasksCount = db.tasks.filter(t => t.eventId === eventId).length;
+
+  const timeline = (db.eventTimelines[eventId] || []).slice().sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+
+  const mySupplements = (event.sceneSupplements || []).filter(s => s.street === userStreet);
+  const allSupplementsCount = (event.sceneSupplements || []).length;
+
+  const relatedStreets = getRelatedStreetsForEvent(event);
+
+  return success(res, {
+    street: userStreet,
+    relationType: (event.reporterDept === userStreet || event.createdBy === req.user?.id) ? '上报' : '参与',
+    event: {
+      id: event.id, title: event.title, type: event.type, level: event.level,
+      status: event.status, address: event.address, location: event.location,
+      description: event.description, reporter: event.reporter, reporterDept: event.reporterDept,
+      currentPhase: event.currentPhase, impactRadius: event.impactRadius,
+      createdAt: event.createdAt, updatedAt: event.updatedAt, closedAt: event.closedAt,
+      departmentIds: event.departmentIds || [], tags: event.tags || []
+    },
+    relatedStreets,
+    visibleDepartments: (event.departmentIds || []).filter(d =>
+      d.includes('街道') || d === userStreet || (STREET_DEPT_MAP[d] || []).length > 0
+    ),
+    tasks: {
+      myStreet: myTasks,
+      myStreetCount: myTasks.length,
+      totalCount: allTasksCount
+    },
+    timeline,
+    supplements: {
+      myStreet: mySupplements,
+      myStreetCount: mySupplements.length,
+      totalCount: allSupplementsCount
+    }
+  }, `街道[${userStreet}]事件详情加载成功`);
 };
 
 const getStreetTasks = (req, res) => {
