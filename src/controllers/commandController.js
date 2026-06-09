@@ -141,9 +141,8 @@ const _generateSuggestedActions = (event, tasks, plan, depts) => {
 };
 
 const executeAction = (req, res) => {
-  const { eventId, action, params } = req.body;
-  const event = db.emergencyEvents.find(e => e.id === eventId);
-  if (!event) return notFound(res, '事件不存在');
+  const { eventId, action } = req.body;
+  if (!eventId || !action) return fail(res, 400, 'eventId和action为必填项');
 
   const requiredPerm = COMMAND_ACTION_PERMISSIONS[action];
   if (requiredPerm && !hasPermission(req.user, requiredPerm)) {
@@ -156,6 +155,9 @@ const executeAction = (req, res) => {
       user: req.user?.name
     });
   }
+
+  const event = db.emergencyEvents.find(e => e.id === eventId);
+  if (!event) return notFound(res, '事件不存在');
 
   const actor = req.user?.id || 'system';
   const actorName = req.user?.name || '系统';
@@ -636,4 +638,167 @@ const getDeepPackage = (req, res) => {
   return success(res, pkg, `事件 ${eventId} 深度协同包已生成，共 ${pkg._meta.renderSections.length} 个渲染分区`);
 };
 
-module.exports = { getCommandContext, executeAction, reportProgress, getDeepPackage };
+const LEVEL_SCORE = { I: 4, II: 3, III: 2, IV: 1 };
+
+const getDutyDashboard = (req, res) => {
+  const { level, street, type } = req.query;
+  const now = new Date();
+
+  const STREET_DEPT_MAP = {
+    '街道办': ['中关村街道办', '海淀街道办', '朝阳街道办', '西城街道办', '东城街道办'],
+    '巡逻组': ['中关村街道办', '海淀街道办']
+  };
+
+  let openEvents = db.emergencyEvents.filter(e => e.status !== 'closed' && e.status !== 'resolved');
+
+  if (level) openEvents = openEvents.filter(e => e.level === level);
+  if (type) openEvents = openEvents.filter(e => e.type === type);
+  if (street) {
+    openEvents = openEvents.filter(e => {
+      const deptIds = e.departmentIds || [];
+      return deptIds.some(d => {
+        const mapped = STREET_DEPT_MAP[d] || [];
+        return d === street || mapped.includes(street);
+      }) || (e.address && e.address.includes(street.replace('街道办', '')));
+    });
+  }
+
+  const highLevelEvents = openEvents
+    .filter(e => e.level === 'I' || e.level === 'II')
+    .sort((a, b) => (LEVEL_SCORE[b.level] || 0) - (LEVEL_SCORE[a.level] || 0) || new Date(a.createdAt) - new Date(b.createdAt))
+    .map(e => {
+      const tasks = db.tasks.filter(t => t.eventId === e.id);
+      const durationMin = Math.round((now - new Date(e.createdAt)) / 60000);
+      return {
+        id: e.id, title: e.title, type: e.type, level: e.level,
+        status: e.status, address: e.address, location: e.location,
+        createdAt: e.createdAt, currentPhase: e.currentPhase,
+        durationMinutes: durationMin,
+        tasksCount: tasks.length,
+        tasksCompleted: tasks.filter(t => t.status === 'completed').length,
+        departments: e.departmentIds || [],
+        reporterDept: e.reporterDept
+      };
+    });
+
+  const activeTasks = [];
+  openEvents.forEach(e => {
+    db.tasks.filter(t => t.eventId === e.id).forEach(t => activeTasks.push({ ...t, eventLevel: e.level }));
+  });
+
+  const timeoutTasks = activeTasks.filter(t => {
+    if (t.status === 'completed') return false;
+    const ageMin = Math.round((now - new Date(t.createdAt)) / 60000);
+    if (t.status === 'dispatched' && ageMin > 20) return true;
+    if (t.status === 'in_progress' && t.acceptedAt) {
+      const workMin = Math.round((now - new Date(t.acceptedAt)) / 60000);
+      if (workMin > 120) return true;
+    }
+    if (t.deadline) {
+      const dead = new Date(t.deadline);
+      if (dead < now) return true;
+    }
+    if (ageMin > 240) return true;
+    return false;
+  }).map(t => ({
+    id: t.id, title: t.title, department: t.department, priority: t.priority,
+    eventId: t.eventId, eventLevel: t.eventLevel, status: t.status, progress: t.progress,
+    ageMinutes: Math.round((now - new Date(t.createdAt)) / 60000),
+    acceptedAt: t.acceptedAt, deadline: t.deadline,
+    reason: (() => {
+      const age = Math.round((now - new Date(t.createdAt)) / 60000);
+      if (t.deadline && new Date(t.deadline) < now) return '已超截止期限';
+      if (t.status === 'dispatched') return '待接收超时(' + age + '分钟)';
+      if (t.status === 'in_progress' && t.acceptedAt) {
+        const w = Math.round((now - new Date(t.acceptedAt)) / 60000);
+        return '处置耗时较长(' + w + '分钟)';
+      }
+      return '任务存在超过' + age + '分钟';
+    })()
+  })).sort((a, b) => b.ageMinutes - a.ageMinutes);
+
+  const pendingNotifyDepts = [];
+  openEvents.forEach(e => {
+    const TYPE_DEPT_MAP = {
+      fire: ['消防支队', '急救中心'], gas: ['消防支队', '燃气公司'], traffic: ['交警支队', '急救中心'],
+      structural: ['消防支队', '住建局'], chemical: ['消防支队', '环保局'],
+      medical: ['卫健委', '疾控中心'], flood: ['水务局', '消防支队'], public_order: ['公安局']
+    };
+    const required = TYPE_DEPT_MAP[e.type] || ['消防支队', '急救中心'];
+    const linked = e.departmentIds || [];
+    const missing = required.filter(d => !linked.includes(d));
+    if (missing.length) {
+      pendingNotifyDepts.push({
+        eventId: e.id, eventLevel: e.level, eventTitle: e.title,
+        eventType: e.type, notified: linked, missing,
+        createdAt: e.createdAt,
+        hoursSince: Math.round((now - new Date(e.createdAt)) / 3600000 * 10) / 10
+      });
+    }
+  });
+
+  const resourceUtilList = db.resources.map(r => {
+    const used = db.tasks.filter(t => (t.resourceIds || []).includes(r.id) && t.status !== 'completed').length;
+    const total = r.totalCount || 5;
+    const util = Math.min(100, Math.round((used / total) * 100));
+    return {
+      id: r.id, name: r.name, category: r.category,
+      used, total, utilization: util, status: util > 80 ? '紧张' : util > 50 ? '正常' : '充足',
+      location: r.location, contact: r.contact
+    };
+  });
+
+  const resourceTightPoints = resourceUtilList
+    .filter(r => r.utilization >= 60)
+    .sort((a, b) => b.utilization - a.utilization)
+    .slice(0, 10);
+
+  const allTimelineEvents = [];
+  openEvents.forEach(e => {
+    (db.eventTimelines[e.id] || []).forEach(tl => {
+      allTimelineEvents.push({ ...tl, eventId: e.id, eventLevel: e.level, eventTitle: e.title });
+    });
+  });
+  const recentTimeline = allTimelineEvents
+    .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+    .slice(0, 30);
+
+  const highRisk = openEvents.filter(e => e.level === 'I').length;
+  const mediumRisk = openEvents.filter(e => e.level === 'II').length;
+
+  return success(res, {
+    _meta: {
+      generatedAt: new Date().toISOString(),
+      filter: { level: level || '全部', street: street || '全部', type: type || '全部' },
+      sections: ['态势总览', '高等级事件', '超时任务预警', '待通知部门', '资源紧张点', '关键时间线']
+    },
+    overview: {
+      openEvents: openEvents.length,
+      highLevelEvents: highLevelEvents.length,
+      highRisk,
+      mediumRisk,
+      activeTasks: activeTasks.length,
+      timeoutTasks: timeoutTasks.length,
+      pendingNotify: pendingNotifyDepts.length,
+      resourcesTight: resourceTightPoints.filter(r => r.status === '紧张').length,
+      avgResponseMinutes: activeTasks.filter(t => t.acceptedAt).length
+        ? Math.round(activeTasks.filter(t => t.acceptedAt).reduce((s, t) => {
+            const m = Math.round((new Date(t.acceptedAt) - new Date(t.createdAt)) / 60000);
+            return s + Math.max(0, m);
+          }, 0) / activeTasks.filter(t => t.acceptedAt).length)
+        : 0
+    },
+    highLevelEvents: highLevelEvents.slice(0, 20),
+    timeoutTasks: timeoutTasks.slice(0, 30),
+    pendingNotifyDepts,
+    resourceTightPoints,
+    recentTimeline,
+    filterOptions: {
+      levels: ['I', 'II', 'III', 'IV'],
+      types: Array.from(new Set(openEvents.map(e => e.type))),
+      streets: ['中关村街道办', '海淀街道办', '朝阳街道办', '西城街道办', '东城街道办']
+    }
+  }, '值班态势工作台已生成，' + openEvents.length + '个未关闭事件');
+};
+
+module.exports = { getCommandContext, executeAction, reportProgress, getDeepPackage, getDutyDashboard };

@@ -49,7 +49,7 @@ const db = {
       department: '和平街道办',
       phone: '13800000003',
       createdAt: new Date().toISOString(),
-      permissions: ['event:view', 'event:create', 'task:view', 'notification:view', 'place:view']
+      permissions: []
     },
     {
       id: 'patrol001',
@@ -60,7 +60,7 @@ const db = {
       department: '巡查一组',
       phone: '13800000004',
       createdAt: new Date().toISOString(),
-      permissions: ['event:create', 'task:view', 'task:update', 'place:view', 'sensor:view']
+      permissions: []
     }
   ],
 

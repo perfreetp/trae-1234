@@ -26,28 +26,28 @@ const ROLE_HIERARCHY = {
     'plan:view', 'plan:create', 'plan:match',
     'notification:view', 'notification:create', 'notification:send',
     'statistics:view',
-    'command:context', 'command:action', 'command:progress',
+    'command:context', 'command:action', 'command:progress', 'command:dashboard', 'command:deep-package',
     'city-object:view', 'city-object:create', 'city-object:update', 'city-object:delete',
     'place:view', 'place:create', 'place:update',
     'sensor:view', 'location:view', 'evacuation:view',
-    'user:view', 'auth:manage'
+    'user:view', 'auth:manage',
+    'report:view'
   ],
   STREET: [
-    'event:view', 'event:create', 'event:timeline',
+    'event:view', 'event:create', 'event:update', 'event:timeline',
     'task:view', 'task:update', 'task:accept',
     'resource:view', 'plan:view',
     'notification:view',
     'statistics:view',
-    'command:context', 'command:progress',
+    'command:progress',
     'city-object:view', 'place:view',
-    'sensor:view', 'location:view', 'evacuation:view'
+    'sensor:view', 'location:view', 'evacuation:view',
+    'street:ledger',
+    'report:view'
   ],
   PATROL: [
-    'event:view',
-    'task:view', 'task:update', 'task:accept',
-    'command:progress',
-    'place:view', 'city-object:view',
-    'sensor:view', 'location:view'
+    'task:view', 'task:accept', 'task:update',
+    'command:progress'
   ]
 };
 
