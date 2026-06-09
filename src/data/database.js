@@ -236,6 +236,10 @@ const db = {
     { id: 'NTF003', eventId: 'EVT-20240610-000001', type: 'evacuation_notice', recipients: [{ type: 'area', name: '国贸大厦及周边500米范围' }], title: '【疏散通知】请立即疏散', content: '附近发生火灾，请相关区域人员按照指引有序疏散至安全区域。', channels: ['sms', 'broadcast'], sentAt: '2024-06-10T08:32:00.000Z', readCount: 2000, totalCount: 5000, status: 'sending' }
   ],
 
+  supervisionRecords: [],
+
+  meetingRecords: [],
+
   departments: [
     { id: '消防支队', name: '市消防救援支队', type: 'emergency', contact: '119', dutyLeader: '张支队长', phone: '13700000001', email: 'fire@city.gov.cn', onDutyStaff: 45 },
     { id: '急救中心', name: '市急救中心', type: 'medical', contact: '120', dutyLeader: '李主任', phone: '13700000002', email: 'ems@city.gov.cn', onDutyStaff: 30 },
@@ -259,7 +263,7 @@ const db = {
   }
 };
 
-const PERSISTENT_KEYS = ['keyPlaces', 'emergencyEvents', 'eventTimelines', 'tasks', 'notifications'];
+const PERSISTENT_KEYS = ['keyPlaces', 'emergencyEvents', 'eventTimelines', 'tasks', 'notifications', 'supervisionRecords', 'meetingRecords'];
 const RUNTIME_FILE = path.resolve(__dirname, '..', '..', 'data', 'runtime-data.json');
 let dirty = false;
 let saveTimer = null;

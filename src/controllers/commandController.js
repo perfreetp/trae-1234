@@ -801,4 +801,182 @@ const getDutyDashboard = (req, res) => {
   }, '值班态势工作台已生成，' + openEvents.length + '个未关闭事件');
 };
 
-module.exports = { getCommandContext, executeAction, reportProgress, getDeepPackage, getDutyDashboard };
+const classifyTask = (task) => {
+  const now = new Date();
+  const created = new Date(task.createdAt);
+  const ageMin = (now - created) / 60000;
+  const lastProgress = (task.progressUpdates && task.progressUpdates.length > 0)
+    ? new Date(task.progressUpdates[task.progressUpdates.length - 1].time)
+    : created;
+  const stagnantMin = (now - lastProgress) / 60000;
+  const deadline = task.deadline ? new Date(task.deadline) : null;
+  const toDeadlineMin = deadline ? (deadline - now) / 60000 : Infinity;
+
+  let reasons = [];
+  let category = null;
+
+  if (task.status === 'dispatched' && ageMin > 20) {
+    reasons.push('派发' + ageMin.toFixed(0) + '分钟未接收');
+    category = category || 'unaccepted';
+  }
+  if (deadline && deadline < now) {
+    reasons.push('已超截止期限' + ((now - deadline) / 60000).toFixed(0) + '分钟');
+    category = category || 'timeout';
+  }
+  if (ageMin > 240) {
+    reasons.push('任务存在' + ageMin.toFixed(0) + '分钟未完成');
+    category = category || 'timeout';
+  }
+  if (task.status === 'in_progress' && stagnantMin > 120) {
+    reasons.push('进度停滞' + stagnantMin.toFixed(0) + '分钟，当前' + (task.progress || 0) + '%');
+    category = category || 'stagnant';
+  }
+  if (deadline && toDeadlineMin > 0 && toDeadlineMin < 60) {
+    reasons.push('临近截止，还剩' + toDeadlineMin.toFixed(0) + '分钟，当前' + (task.progress || 0) + '%');
+    category = category || 'approaching';
+  }
+
+  return { category, reasons };
+};
+
+const getSupervisionGroups = (req, res) => {
+  const { type, level, status, category } = req.query;
+  let openEvents = db.emergencyEvents.filter(e => !e.closedAt);
+  if (level) openEvents = openEvents.filter(e => e.level === level);
+  if (type) openEvents = openEvents.filter(e => e.type === type);
+  const openEventIds = new Set(openEvents.map(e => e.id));
+
+  let grouped = { timeout: [], unaccepted: [], stagnant: [], approaching: [] };
+  let meta = { timeout: 0, unaccepted: 0, stagnant: 0, approaching: 0, totalSupervisedToday: 0 };
+
+  const today = new Date();
+  const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate()).toISOString();
+  meta.totalSupervisedToday = (db.supervisionRecords || []).filter(s => s.createdAt >= todayStart).length;
+
+  db.tasks.forEach(task => {
+    if (!openEventIds.has(task.eventId)) return;
+    if (status && task.status !== status) return;
+
+    const { category: cat, reasons } = classifyTask(task);
+    if (!cat) return;
+    if (category && category !== cat) return;
+
+    const event = openEvents.find(e => e.id === task.eventId);
+    grouped[cat].push({
+      ...task,
+      eventInfo: event ? { id: event.id, title: event.title, level: event.level, type: event.type, address: event.address } : null,
+      supervisionReasons: reasons,
+      supervisionCategory: cat
+    });
+    meta[cat]++;
+  });
+
+  ['timeout', 'unaccepted', 'stagnant', 'approaching'].forEach(c =>
+    grouped[c].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+  );
+
+  return success(res, {
+    _meta: {
+      ...meta,
+      totalNeedSupervision: meta.timeout + meta.unaccepted + meta.stagnant + meta.approaching,
+      categories: [
+        { key: 'timeout', label: '超时任务', desc: '超240分钟或超截止期限' },
+        { key: 'unaccepted', label: '未接收任务', desc: '派发超20分钟未接收' },
+        { key: 'stagnant', label: '进度停滞', desc: '处置中超120分钟无进展' },
+        { key: 'approaching', label: '临近截止', desc: '距截止不足60分钟' }
+      ]
+    },
+    groups: grouped,
+    todaySupervisionRecords: (db.supervisionRecords || [])
+      .filter(s => s.createdAt >= todayStart)
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 50)
+  }, '任务督办分组加载成功');
+};
+
+const createSupervision = (req, res) => {
+  const { taskIds, eventId, urgency = 'normal', content, channels } = req.body;
+  if (!taskIds || !Array.isArray(taskIds) || taskIds.length === 0) {
+    return fail(res, 400, '至少指定一个需要督办的任务ID');
+  }
+
+  const tasks = taskIds.map(id => db.tasks.find(t => t.id === id)).filter(Boolean);
+  if (tasks.length === 0) return fail(res, 404, '指定的任务不存在');
+
+  const now = new Date().toISOString();
+  const operator = req.user?.id || 'system';
+  const operatorName = req.user?.name || '指挥中心';
+  const event = eventId
+    ? db.emergencyEvents.find(e => e.id === eventId)
+    : (tasks.length > 0 ? db.emergencyEvents.find(e => e.id === tasks[0].eventId) : null);
+
+  const results = [];
+  tasks.forEach(task => {
+    const { category, reasons } = classifyTask(task);
+    const reasonText = (reasons && reasons.length > 0) ? reasons.join('，') : (category || '需要督办');
+    const supervisionContent = content || ('【' + operatorName + '督办】任务[' + task.title + '] ' + reasonText + '，请立即反馈进展');
+
+    const supervision = {
+      id: 'SUP-' + generateId(),
+      taskId: task.id,
+      eventId: task.eventId,
+      eventTitle: event ? event.title : null,
+      eventLevel: event ? event.level : null,
+      category: category || 'manual',
+      urgency,
+      department: task.department,
+      assignee: task.assignee,
+      content: supervisionContent,
+      reasons,
+      channels: channels || ['app', 'sms'],
+      createdBy: operator,
+      createdByName: operatorName,
+      createdAt: now
+    };
+    db.supervisionRecords.push(supervision);
+
+    const notifChannels = channels || ['app', 'sms'];
+    const recipients = [
+      { type: 'department', id: task.department },
+      { type: 'user', id: task.assignee }
+    ].filter(r => r.id);
+    const notification = {
+      id: 'NTF-' + generateId(),
+      eventId: task.eventId,
+      taskId: task.id,
+      supervisionId: supervision.id,
+      type: 'supervision',
+      recipients,
+      title: '【' + (urgency === 'critical' ? '紧急' : urgency === 'high' ? '重要' : '') + '督办】' + task.title,
+      content: supervisionContent,
+      channels: notifChannels,
+      sentAt: now,
+      readCount: 0,
+      totalCount: 10,
+      status: 'sent',
+      urgency
+    };
+    db.notifications.push(notification);
+
+    const timelineItem = {
+      id: generateId(),
+      timestamp: now,
+      actor: operator,
+      action: 'task_supervised',
+      description: '[' + operatorName + '] 向[' + (task.department || '') + ']督办：' + supervisionContent.slice(0, 40),
+      data: { taskId: task.id, supervisionId: supervision.id, category, reasons, urgency }
+    };
+    db.eventTimelines[task.eventId] = db.eventTimelines[task.eventId] || [];
+    db.eventTimelines[task.eventId].push(timelineItem);
+
+    results.push({ taskId: task.id, supervisionId: supervision.id, notificationId: notification.id, category, reasons });
+  });
+
+  markDirty();
+  return success(res, {
+    supervisedCount: tasks.length,
+    results,
+    summary: '成功对' + tasks.length + '个任务发出督办，已同步生成通知并写入事件时间线'
+  }, '督办指令已下发');
+};
+
+module.exports = { getCommandContext, executeAction, reportProgress, getDeepPackage, getDutyDashboard, getSupervisionGroups, createSupervision };

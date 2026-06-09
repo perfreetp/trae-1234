@@ -119,35 +119,43 @@
       ]
     },
     {
-      "id": "EVT-20260610-499616",
+      "id": "EVT-20260610-457490",
       "type": "fire",
       "level": "III",
-      "title": "巡查权限测试-火灾",
-      "description": "",
+      "title": "和平街道小区火情",
+      "description": "和平街道某小区阳台冒烟",
       "location": {
-        "lat": 31.235,
-        "lng": 121.489
+        "lat": 39.92,
+        "lng": 116.43
       },
-      "address": "中关村大街1号",
+      "address": "和平街道阳光小区3号楼",
       "objectId": null,
-      "reporter": "tester",
+      "reporter": {
+        "type": "user",
+        "id": "street001",
+        "name": "李值班"
+      },
       "status": "pending",
       "currentPhase": "待处置",
       "impactRadius": 500,
       "affectedPeople": 0,
-      "createdAt": "2026-06-09T21:40:00.704Z",
-      "updatedAt": "2026-06-09T21:40:00.737Z",
+      "createdAt": "2026-06-09T22:06:01.668Z",
+      "updatedAt": "2026-06-09T22:06:01.706Z",
       "closedAt": null,
       "createdBy": "street001",
       "commanderId": null,
       "departmentIds": [
-        "巡逻组"
+        "和平街道办"
       ],
-      "tags": [],
+      "tags": [
+        "和平街道",
+        "火情",
+        "居民楼"
+      ],
       "sceneSupplements": [
         {
           "street": "和平街道办",
-          "sceneDescription": "现场有2辆小轿车追尾，无人员伤亡，轻微财产损失",
+          "sceneDescription": "和平街道：阳台冒烟，无明火，户主已疏散",
           "casualties": {
             "dead": 0,
             "injured": 0,
@@ -156,40 +164,81 @@
           "trapped": 0,
           "propertyDamage": "",
           "environmentalImpact": "",
-          "roadCondition": "最外侧车道受阻，已摆放警示标志",
-          "onSiteCommander": "张主任 13800138000",
-          "additionalNotes": "预计1小时内完成清理",
+          "roadCondition": "畅通",
+          "onSiteCommander": "和平街道李主任",
+          "additionalNotes": "",
           "images": [],
           "attachments": [],
-          "supplementedAt": "2026-06-09T21:40:00.737Z",
+          "supplementedAt": "2026-06-09T22:06:01.699Z",
           "supplementedBy": "street001"
         }
       ]
     },
     {
-      "id": "EVT-20260610-504412",
+      "id": "EVT-20260610-300398",
       "type": "traffic",
       "level": "IV",
-      "title": "日报联动测试-交通事故",
-      "description": "",
+      "title": "朝阳街道路口刮蹭",
+      "description": "朝阳街道主要路口汽车刮蹭",
       "location": {
-        "lat": 31.23,
-        "lng": 121.48
+        "lat": 39.91,
+        "lng": 116.46
       },
-      "address": "海淀大街200号",
+      "address": "朝阳街道建国路88号路口",
       "objectId": null,
-      "reporter": "街道值班",
-      "status": "resolved",
-      "currentPhase": "处置完成",
+      "reporter": {
+        "type": "user",
+        "id": "commander001",
+        "name": "张指挥"
+      },
+      "status": "pending",
+      "currentPhase": "待处置",
       "impactRadius": 200,
       "affectedPeople": 0,
-      "createdAt": "2026-06-09T21:40:00.769Z",
-      "updatedAt": "2026-06-09T21:40:01.789Z",
-      "closedAt": "2026-06-09T21:40:01.789Z",
-      "createdBy": "street001",
+      "createdAt": "2026-06-09T22:06:01.671Z",
+      "updatedAt": "2026-06-09T22:06:01.673Z",
+      "closedAt": null,
+      "createdBy": "commander001",
       "commanderId": null,
       "departmentIds": [
+        "朝阳街道办",
         "交警支队"
+      ],
+      "tags": [
+        "朝阳街道",
+        "交通事故"
+      ]
+    },
+    {
+      "id": "EVT-20260610-359224",
+      "type": "gas",
+      "level": "III",
+      "title": "和平街道燃气泄漏",
+      "description": "某餐饮店铺燃气报警",
+      "location": {
+        "lat": 39.918,
+        "lng": 116.435
+      },
+      "address": "和平街道美食街88号",
+      "objectId": null,
+      "reporter": {
+        "type": "user",
+        "id": "commander001",
+        "name": "张指挥"
+      },
+      "status": "pending",
+      "currentPhase": "待处置",
+      "impactRadius": 500,
+      "affectedPeople": 0,
+      "createdAt": "2026-06-09T22:06:01.687Z",
+      "updatedAt": "2026-06-09T22:06:01.689Z",
+      "closedAt": null,
+      "createdBy": "commander001",
+      "commanderId": null,
+      "departmentIds": [
+        "和平街道办",
+        "燃气公司",
+        "消防支队"
       ],
       "tags": []
     }
@@ -277,71 +326,26 @@
         }
       }
     ],
-    "EVT-20260610-499616": [
+    "EVT-20260610-457490": [
       {
-        "id": "f861ddb2598c45b5",
-        "timestamp": "2026-06-09T21:40:00.704Z",
+        "id": "69068dca037a4b1d",
+        "timestamp": "2026-06-09T22:06:01.668Z",
         "actor": "street001",
         "action": "event_created",
-        "description": "李值班 上报了突发事件: 巡查权限测试-火灾",
+        "description": "李值班 上报了突发事件: 和平街道小区火情",
         "data": {
           "source": "manual_report"
         }
       },
       {
-        "id": "ddf7e60e62fd4876",
-        "timestamp": "2026-06-09T21:40:00.706Z",
-        "actor": "commander001",
-        "action": "task_dispatched",
-        "description": "派发任务: 巡查权限验证任务 -> 巡逻组",
-        "data": {
-          "taskId": "TASK-1781041200706-625",
-          "priority": "medium",
-          "type": "patrol"
-        }
-      },
-      {
-        "id": "8e08ad5c6fdb4557",
-        "timestamp": "2026-06-09T21:40:00.712Z",
-        "actor": "patrol001",
-        "action": "task_accepted",
-        "description": "任务 巡查权限验证任务 已被 巡逻组 接收",
-        "data": {
-          "taskId": "TASK-1781041200706-625"
-        }
-      },
-      {
-        "id": "58556b9773ac43a6",
-        "timestamp": "2026-06-09T21:40:00.714Z",
-        "actor": "patrol001",
-        "action": "task_progress",
-        "description": "巡逻组 [巡查权限验证任务] 进展: 20% - 已出发赶赴现场",
-        "data": {
-          "taskId": "TASK-1781041200706-625",
-          "progress": 20,
-          "status": "in_progress"
-        }
-      },
-      {
-        "id": "ad2c5ed79f9346de",
-        "timestamp": "2026-06-09T21:40:00.718Z",
-        "actor": "patrol001",
-        "action": "field_report",
-        "description": "王巡查 回传现场进展: 现场无人员被困",
-        "data": {
-          "taskId": "TASK-1781041200706-625",
-          "progress": 30
-        }
-      },
-      {
-        "id": "aec2c860eee04b6d",
-        "timestamp": "2026-06-09T21:40:00.737Z",
+        "id": "4f0a5b3d0ee74576",
+        "timestamp": "2026-06-09T22:06:01.699Z",
         "actor": "street001",
         "action": "scene_supplemented",
-        "description": "[和平街道办] 补充现场信息: 现场有2辆小轿车追尾，无人员伤亡，轻微财产损失",
+        "description": "[和平街道办] 补充现场信息: 和平街道：阳台冒烟，无明火，户主已疏散",
         "data": {
           "street": "和平街道办",
-          "sceneDescription": "现场有2辆小轿车追尾，无人员伤亡，轻微财产损失",
+          "sceneDescription": "和平街道：阳台冒烟，无明火，户主已疏散",
           "casualties": {
             "dead": 0,
             "injured": 0,
@@ -350,68 +354,158 @@
           "trapped": 0,
           "propertyDamage": "",
           "environmentalImpact": "",
-          "roadCondition": "最外侧车道受阻，已摆放警示标志",
-          "onSiteCommander": "张主任 13800138000",
-          "additionalNotes": "预计1小时内完成清理",
+          "roadCondition": "畅通",
+          "onSiteCommander": "和平街道李主任",
+          "additionalNotes": "",
           "images": [],
           "attachments": [],
-          "supplementedAt": "2026-06-09T21:40:00.737Z",
+          "supplementedAt": "2026-06-09T22:06:01.699Z",
           "supplementedBy": "street001"
+        }
+      },
+      {
+        "id": "7c3e10a838804aee",
+        "timestamp": "2026-06-09T22:06:01.704Z",
+        "actor": "commander001",
+        "action": "task_dispatched",
+        "description": "派发任务: 火情原因核查 -> 和平街道办(李值班)",
+        "data": {
+          "taskId": "TASK-1781042761704-41",
+          "priority": "high",
+          "type": "verification"
+        }
+      },
+      {
+        "id": "eaf4b5a7016b475b",
+        "timestamp": "2026-06-09T22:06:01.706Z",
+        "actor": "commander001",
+        "action": "task_dispatched",
+        "description": "派发任务: 受灾住户安抚 -> 和平街道办(王社区)",
+        "data": {
+          "taskId": "TASK-1781042761706-193",
+          "priority": "normal",
+          "type": "comfort"
+        }
+      },
+      {
+        "id": "1990f06cd4ea48ea",
+        "timestamp": "2026-06-09T22:06:01.710Z",
+        "actor": "commander001",
+        "action": "task_supervised",
+        "description": "[张指挥] 向[和平街道办]督办：【督办】请在30分钟内完成火情核查并书面反馈",
+        "data": {
+          "taskId": "TASK-1781042761704-41",
+          "supervisionId": "SUP-18e9b4cd42a747a9",
+          "category": "timeout",
+          "reasons": [
+            "已超截止期限60分钟"
+          ],
+          "urgency": "high"
+        }
+      },
+      {
+        "id": "7bbf088cba284a29",
+        "timestamp": "2026-06-09T22:06:01.726Z",
+        "actor": "commander001",
+        "action": "meeting_created",
+        "description": "[张指挥] 创建了跨部门会商：《和平街道火情协同处置会商》，参会部门3个",
+        "data": {
+          "meetingId": "MTG-fc76278a21964fc9",
+          "type": "emergency",
+          "participants": [
+            {
+              "name": "张指挥",
+              "department": "指挥中心",
+              "role": "chair"
+            },
+            {
+              "name": "李值班",
+              "department": "和平街道办",
+              "role": "member"
+            },
+            {
+              "name": "王队长",
+              "department": "消防支队",
+              "role": "member"
+            }
+          ],
+          "todoCount": 2
         }
       }
     ],
-    "EVT-20260610-504412": [
+    "EVT-20260610-300398": [
       {
-        "id": "53fd4b6d90604e9f",
-        "timestamp": "2026-06-09T21:40:00.769Z",
-        "actor": "street001",
+        "id": "bf4e12b2fe9c4be7",
+        "timestamp": "2026-06-09T22:06:01.671Z",
+        "actor": "commander001",
         "action": "event_created",
-        "description": "李值班 上报了突发事件: 日报联动测试-交通事故",
+        "description": "张指挥 上报了突发事件: 朝阳街道路口刮蹭",
         "data": {
           "source": "manual_report"
         }
       },
       {
-        "id": "01030d4eaf774643",
-        "timestamp": "2026-06-09T21:40:01.279Z",
+        "id": "deb4f52af5494481",
+        "timestamp": "2026-06-09T22:06:01.673Z",
         "actor": "commander001",
-        "action": "task_dispatched",
-        "description": "派发任务: 日报联动-事故处理 -> 交警支队",
+        "action": "event_updated",
+        "description": "事件信息已更新",
         "data": {
-          "taskId": "TASK-1781041201279-238",
-          "priority": "medium",
-          "type": "traffic_control"
+          "departmentIds": [
+            "朝阳街道办",
+            "交警支队"
+          ]
         }
       },
       {
-        "id": "810da610c8ca4dec",
-        "timestamp": "2026-06-09T21:40:01.280Z",
-        "actor": "street001",
-        "action": "task_accepted",
-        "description": "任务 日报联动-事故处理 已被 交警支队 接收",
-        "data": {
-          "taskId": "TASK-1781041201279-238"
-        }
-      },
-      {
-        "id": "346d081ab4f3490c",
-        "timestamp": "2026-06-09T21:40:01.282Z",
-        "actor": "street001",
-        "action": "task_completed",
-        "description": "交警支队 [日报联动-事故处理] 进展: 100% - 事故现场清理完毕，交通已恢复",
-        "data": {
-          "taskId": "TASK-1781041201279-238",
-          "progress": 100,
-          "status": "completed"
-        }
-      },
-      {
-        "id": "abd97eb9fa3b411d",
-        "timestamp": "2026-06-09T21:40:01.789Z",
+        "id": "3e6dc90a8b0346db",
+        "timestamp": "2026-06-09T22:06:01.728Z",
         "actor": "commander001",
-        "action": "event_closed",
-        "description": "张指挥 关闭事件，状态: 处置完成",
-        "data": {}
+        "action": "meeting_created",
+        "description": "[张指挥] 创建了跨部门会商：《朝阳街道交通事故处理会商》，参会部门2个",
+        "data": {
+          "meetingId": "MTG-3e7540e08dc9492f",
+          "type": "standard",
+          "participants": [
+            {
+              "name": "赵警官",
+              "department": "交警支队",
+              "role": "chair"
+            },
+            {
+              "name": "孙协调",
+              "department": "朝阳街道办",
+              "role": "member"
+            }
+          ],
+          "todoCount": 1
+        }
+      }
+    ],
+    "EVT-20260610-359224": [
+      {
+        "id": "0b09d1c7edd54d74",
+        "timestamp": "2026-06-09T22:06:01.687Z",
+        "actor": "commander001",
+        "action": "event_created",
+        "description": "张指挥 上报了突发事件: 和平街道燃气泄漏",
+        "data": {
+          "source": "manual_report"
+        }
+      },
+      {
+        "id": "163d2fe42e0e404e",
+        "timestamp": "2026-06-09T22:06:01.689Z",
+        "actor": "commander001",
+        "action": "event_updated",
+        "description": "事件信息已更新",
+        "data": {
+          "departmentIds": [
+            "和平街道办",
+            "燃气公司",
+            "消防支队"
+          ]
+        }
       }
     ]
   },
@@ -506,75 +600,48 @@
       ]
     },
     {
-      "id": "TASK-1781041200706-625",
-      "eventId": "EVT-20260610-499616",
-      "title": "巡查权限验证任务",
-      "type": "patrol",
-      "department": "巡逻组",
-      "assignee": "",
-      "priority": "medium",
-      "status": "in_progress",
+      "id": "TASK-1781042761704-41",
+      "eventId": "EVT-20260610-457490",
+      "title": "火情原因核查",
+      "type": "verification",
+      "department": "和平街道办",
+      "assignee": "李值班",
+      "priority": "high",
+      "status": "dispatched",
       "location": {
-        "lat": 31.235,
-        "lng": 121.489
+        "lat": 39.92,
+        "lng": 116.43
       },
-      "description": "",
+      "description": "街道办核查火情原因并书面报告",
       "resourceIds": [],
-      "deadline": null,
-      "createdAt": "2026-06-09T21:40:00.706Z",
-      "acceptedAt": "2026-06-09T21:40:00.712Z",
+      "deadline": "2026-06-09T21:06:01.702Z",
+      "createdAt": "2026-06-09T22:06:01.704Z",
+      "acceptedAt": null,
       "completedAt": null,
-      "progress": 30,
-      "progressUpdates": [
-        {
-          "time": "2026-06-09T21:40:00.712Z",
-          "status": "已接收",
-          "description": "王巡查已接收任务，开始执行"
-        },
-        {
-          "time": "2026-06-09T21:40:00.714Z",
-          "status": "in_progress",
-          "description": "已出发赶赴现场"
-        },
-        {
-          "time": "2026-06-09T21:40:00.718Z",
-          "status": "进展",
-          "description": "现场无人员被困"
-        }
-      ]
+      "progress": 0,
+      "progressUpdates": []
     },
     {
-      "id": "TASK-1781041201279-238",
-      "eventId": "EVT-20260610-504412",
-      "title": "日报联动-事故处理",
-      "type": "traffic_control",
-      "department": "交警支队",
-      "assignee": "",
-      "priority": "medium",
-      "status": "completed",
+      "id": "TASK-1781042761706-193",
+      "eventId": "EVT-20260610-457490",
+      "title": "受灾住户安抚",
+      "type": "comfort",
+      "department": "和平街道办",
+      "assignee": "王社区",
+      "priority": "normal",
+      "status": "dispatched",
       "location": {
-        "lat": 31.23,
-        "lng": 121.48
+        "lat": 39.92,
+        "lng": 116.43
       },
-      "description": "",
+      "description": "社区工作者安抚受灾住户情绪",
       "resourceIds": [],
-      "deadline": null,
-      "createdAt": "2026-06-09T21:40:01.279Z",
-      "acceptedAt": "2026-06-09T21:40:01.280Z",
-      "completedAt": "2026-06-09T21:40:01.282Z",
-      "progress": 100,
-      "progressUpdates": [
-        {
-          "time": "2026-06-09T21:40:01.280Z",
-          "status": "已接收",
-          "description": "李值班已接收任务，开始执行"
-        },
-        {
-          "time": "2026-06-09T21:40:01.282Z",
-          "status": "completed",
-          "description": "事故现场清理完毕，交通已恢复"
-        }
-      ]
+      "deadline": "2026-06-09T22:26:01.705Z",
+      "createdAt": "2026-06-09T22:06:01.706Z",
+      "acceptedAt": null,
+      "completedAt": null,
+      "progress": 0,
+      "progressUpdates": []
     }
   ],
   "notifications": [
@@ -653,6 +720,198 @@
       "readCount": 2000,
       "totalCount": 5000,
       "status": "sending"
+    },
+    {
+      "id": "NTF-02454777c5eb44c9",
+      "eventId": "EVT-20260610-457490",
+      "taskId": "TASK-1781042761704-41",
+      "supervisionId": "SUP-18e9b4cd42a747a9",
+      "type": "supervision",
+      "recipients": [
+        {
+          "type": "department",
+          "id": "和平街道办"
+        },
+        {
+          "type": "user",
+          "id": "李值班"
+        }
+      ],
+      "title": "【重要督办】火情原因核查",
+      "content": "【督办】请在30分钟内完成火情核查并书面反馈",
+      "channels": [
+        "app",
+        "sms"
+      ],
+      "sentAt": "2026-06-09T22:06:01.710Z",
+      "readCount": 0,
+      "totalCount": 10,
+      "status": "sent",
+      "urgency": "high"
+    }
+  ],
+  "supervisionRecords": [
+    {
+      "id": "SUP-18e9b4cd42a747a9",
+      "taskId": "TASK-1781042761704-41",
+      "eventId": "EVT-20260610-457490",
+      "eventTitle": "和平街道小区火情",
+      "eventLevel": "III",
+      "category": "timeout",
+      "urgency": "high",
+      "department": "和平街道办",
+      "assignee": "李值班",
+      "content": "【督办】请在30分钟内完成火情核查并书面反馈",
+      "reasons": [
+        "已超截止期限60分钟"
+      ],
+      "channels": [
+        "app",
+        "sms"
+      ],
+      "createdBy": "commander001",
+      "createdByName": "张指挥",
+      "createdAt": "2026-06-09T22:06:01.710Z"
+    }
+  ],
+  "meetingRecords": [
+    {
+      "id": "MTG-fc76278a21964fc9",
+      "eventId": "EVT-20260610-457490",
+      "eventTitle": "和平街道小区火情",
+      "eventLevel": "III",
+      "title": "和平街道火情协同处置会商",
+      "type": "emergency",
+      "status": "scheduled",
+      "scheduledAt": null,
+      "actualStartAt": null,
+      "actualEndAt": null,
+      "location": null,
+      "meetingLink": null,
+      "summary": "针对和平街道小区火情，多部门联合处置方案研讨",
+      "decisions": [
+        "决定增派2名社区工作者协助",
+        "要求燃气公司半小时内到现场排查管线"
+      ],
+      "participants": [
+        {
+          "id": "c3faf2a107214772",
+          "name": "张指挥",
+          "department": "指挥中心",
+          "role": "chair",
+          "joinedAt": "2026-06-09T22:06:01.726Z"
+        },
+        {
+          "id": "8f4684592d934625",
+          "name": "李值班",
+          "department": "和平街道办",
+          "role": "member",
+          "joinedAt": "2026-06-09T22:06:01.726Z"
+        },
+        {
+          "id": "7c6ce09837814ad4",
+          "name": "王队长",
+          "department": "消防支队",
+          "role": "member",
+          "joinedAt": "2026-06-09T22:06:01.726Z"
+        }
+      ],
+      "departmentIds": [
+        "和平街道办"
+      ],
+      "todoItems": [
+        {
+          "id": "eec5f5a42e29474f",
+          "content": "出具火情初步鉴定报告",
+          "owner": "消防支队",
+          "deadline": "2026-06-10T00:06:01.725Z",
+          "priority": "high",
+          "status": "pending",
+          "createdAt": "2026-06-09T22:06:01.726Z",
+          "updatedAt": "2026-06-09T22:06:01.726Z",
+          "createdBy": "commander001"
+        },
+        {
+          "id": "198f567280e543c1",
+          "content": "社区逐户通知回访",
+          "owner": "和平街道办",
+          "ownerDept": "和平街道办",
+          "deadline": "2026-06-09T23:06:01.725Z",
+          "priority": "urgent",
+          "status": "pending",
+          "createdAt": "2026-06-09T22:06:01.726Z",
+          "updatedAt": "2026-06-09T22:06:01.726Z",
+          "createdBy": "commander001"
+        }
+      ],
+      "attachments": [],
+      "tags": [
+        "火情",
+        "多部门协同"
+      ],
+      "createdBy": "commander001",
+      "createdByName": "张指挥",
+      "createdByDept": "指挥中心",
+      "createdAt": "2026-06-09T22:06:01.726Z",
+      "updatedAt": "2026-06-09T22:06:01.726Z",
+      "closedAt": null
+    },
+    {
+      "id": "MTG-3e7540e08dc9492f",
+      "eventId": "EVT-20260610-300398",
+      "eventTitle": "朝阳街道路口刮蹭",
+      "eventLevel": "IV",
+      "title": "朝阳街道交通事故处理会商",
+      "type": "standard",
+      "status": "scheduled",
+      "scheduledAt": null,
+      "actualStartAt": null,
+      "actualEndAt": null,
+      "location": null,
+      "meetingLink": null,
+      "summary": "",
+      "decisions": [],
+      "participants": [
+        {
+          "id": "975d90d7739b42b9",
+          "name": "赵警官",
+          "department": "交警支队",
+          "role": "chair",
+          "joinedAt": "2026-06-09T22:06:01.728Z"
+        },
+        {
+          "id": "834e65a6547a4b9e",
+          "name": "孙协调",
+          "department": "朝阳街道办",
+          "role": "member",
+          "joinedAt": "2026-06-09T22:06:01.728Z"
+        }
+      ],
+      "departmentIds": [
+        "朝阳街道办",
+        "交警支队"
+      ],
+      "todoItems": [
+        {
+          "id": "aba96245fdcd4cd1",
+          "content": "出具交通事故认定书",
+          "owner": "交警支队",
+          "deadline": null,
+          "priority": "high",
+          "status": "pending",
+          "createdAt": "2026-06-09T22:06:01.728Z",
+          "updatedAt": "2026-06-09T22:06:01.728Z",
+          "createdBy": "commander001"
+        }
+      ],
+      "attachments": [],
+      "tags": [],
+      "createdBy": "commander001",
+      "createdByName": "张指挥",
+      "createdByDept": "指挥中心",
+      "createdAt": "2026-06-09T22:06:01.728Z",
+      "updatedAt": "2026-06-09T22:06:01.728Z",
+      "closedAt": null
     }
   ]
 }

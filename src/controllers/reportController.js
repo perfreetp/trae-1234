@@ -78,6 +78,30 @@ const buildDailyReport = (dateStr) => {
 
   const notificationsSent = notifications.filter(n => sameDay(n.sentAt, target));
 
+  const supervisions = (db.supervisionRecords || []).filter(s => sameDay(s.createdAt, target));
+  const supervisionByCategory = {};
+  supervisions.forEach(s => {
+    const c = s.category || 'manual';
+    supervisionByCategory[c] = (supervisionByCategory[c] || 0) + 1;
+  });
+  const supervisionByUrgency = {};
+  supervisions.forEach(s => {
+    const u = s.urgency || 'normal';
+    supervisionByUrgency[u] = (supervisionByUrgency[u] || 0) + 1;
+  });
+  const supervisedDepts = {};
+  supervisions.forEach(s => {
+    const d = s.department;
+    if (!d) return;
+    supervisedDepts[d] = (supervisedDepts[d] || 0) + 1;
+  });
+
+  const meetings = (db.meetingRecords || []).filter(m => sameDay(m.createdAt, target));
+  const meetingByType = {};
+  meetings.forEach(m => {
+    meetingByType[m.type || 'standard'] = (meetingByType[m.type || 'standard'] || 0) + 1;
+  });
+
   const totalEvents = Math.max(1, newEvents.length + eventsHandling.length);
   const totalTasks = Math.max(1, tasksCreated.length);
 
@@ -122,6 +146,28 @@ const buildDailyReport = (dateStr) => {
         app: notificationsSent.filter(n => n.channels?.includes('app')).length,
         email: notificationsSent.filter(n => n.channels?.includes('email')).length
       }
+    },
+    supervision: {
+      totalCount: supervisions.length,
+      byCategory: supervisionByCategory,
+      byUrgency: supervisionByUrgency,
+      byDepartment: supervisedDepts,
+      list: supervisions.map(s => ({
+        id: s.id, taskId: s.taskId, eventId: s.eventId,
+        eventTitle: s.eventTitle, category: s.category, urgency: s.urgency,
+        department: s.department, content: s.content?.slice(0, 50),
+        createdByName: s.createdByName, createdAt: s.createdAt
+      }))
+    },
+    meetings: {
+      totalCount: meetings.length,
+      byType: meetingByType,
+      list: meetings.map(m => ({
+        id: m.id, eventId: m.eventId, title: m.title, type: m.type,
+        participantsCount: (m.participants || []).length,
+        todoCount: (m.todoItems || []).length,
+        createdByName: m.createdByName, createdAt: m.createdAt
+      }))
     },
     highlights: (() => {
       const items = [];

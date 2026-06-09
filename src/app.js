@@ -20,6 +20,7 @@ const taskRoutes = require('./routes/taskRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
 const statisticsRoutes = require('./routes/statisticsRoutes');
 const commandRoutes = require('./routes/commandRoutes');
+const meetingRoutes = require('./routes/meetingRoutes');
 
 const app = express();
 
@@ -49,6 +50,7 @@ app.use('/api/tasks', taskRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/statistics', statisticsRoutes);
 app.use('/api/command', commandRoutes);
+app.use('/api/meetings', meetingRoutes);
 
 app.use((err, req, res, next) => {
   console.error(err.stack);

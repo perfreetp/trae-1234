@@ -222,4 +222,4 @@ const supplementEvent = (req, res) => {
   return success(res, { event, supplement, timelineItem }, '现场信息补充成功，已同步至事件时间线');
 };
 
-module.exports = { getStreetLedger, getStreetTasks, supplementEvent, getUserStreet, getRelatedStreetsForEvent };
+module.exports = { getStreetLedger, getStreetEventDetail, getStreetTasks, supplementEvent, getUserStreet, getRelatedStreetsForEvent, isStreetRelatedToEvent };

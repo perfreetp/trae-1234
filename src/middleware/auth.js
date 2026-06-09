@@ -27,6 +27,8 @@ const ROLE_HIERARCHY = {
     'notification:view', 'notification:create', 'notification:send',
     'statistics:view',
     'command:context', 'command:action', 'command:progress', 'command:dashboard', 'command:deep-package',
+    'supervision:view', 'supervision:create',
+    'meeting:view', 'meeting:create', 'meeting:update',
     'city-object:view', 'city-object:create', 'city-object:update', 'city-object:delete',
     'place:view', 'place:create', 'place:update',
     'sensor:view', 'location:view', 'evacuation:view',
@@ -43,6 +45,7 @@ const ROLE_HIERARCHY = {
     'city-object:view', 'place:view',
     'sensor:view', 'location:view', 'evacuation:view',
     'street:ledger',
+    'meeting:view',
     'report:view'
   ],
   PATROL: [

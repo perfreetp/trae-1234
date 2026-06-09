@@ -1,10 +1,17 @@
 const { db, createEventId, generateId } = require('../data/database');
 const { success, fail, notFound, paginate, isWithinRadius, generateCirclePoints, calculateDistance } = require('../utils/response');
 const { markDirty } = require('../utils/persist');
+const { isStreetRelatedToEvent, getUserStreet } = require('./streetLedgerController');
 
 const listEvents = (req, res) => {
   const { type, level, status, keyword, page = 1, pageSize = 20 } = req.query;
   let list = [...db.emergencyEvents];
+
+  if (req.user?.role === 'STREET') {
+    const userStreet = getUserStreet(req.user);
+    list = list.filter(e => isStreetRelatedToEvent(e, userStreet));
+  }
+
   if (type) list = list.filter(e => e.type === type);
   if (level) list = list.filter(e => e.level === level);
   if (status) list = list.filter(e => e.status === status);
@@ -20,6 +27,14 @@ const listEvents = (req, res) => {
 const getEvent = (req, res) => {
   const event = db.emergencyEvents.find(e => e.id === req.params.id);
   if (!event) return notFound(res, '事件不存在');
+
+  if (req.user?.role === 'STREET') {
+    const userStreet = getUserStreet(req.user);
+    if (!isStreetRelatedToEvent(event, userStreet)) {
+      return fail(res, 403, '您所在的街道无权查看此事件');
+    }
+  }
+
   const timeline = db.eventTimelines[event.id] || [];
   const tasks = db.tasks.filter(t => t.eventId === event.id);
   const notifications = db.notifications.filter(n => n.eventId === event.id);
@@ -91,12 +106,32 @@ const updateEvent = (req, res) => {
 };
 
 const getTimeline = (req, res) => {
+  const event = db.emergencyEvents.find(e => e.id === req.params.id);
+  if (!event) return notFound(res, '事件不存在');
+
+  if (req.user?.role === 'STREET') {
+    const userStreet = getUserStreet(req.user);
+    if (!isStreetRelatedToEvent(event, userStreet)) {
+      return fail(res, 403, '您所在的街道无权查看此事件时间线');
+    }
+  }
+
   const timeline = db.eventTimelines[req.params.id] || [];
   timeline.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
   return success(res, { eventId: req.params.id, timeline });
 };
 
 const addTimeline = (req, res) => {
+  const event = db.emergencyEvents.find(e => e.id === req.params.id);
+  if (!event) return notFound(res, '事件不存在');
+
+  if (req.user?.role === 'STREET') {
+    const userStreet = getUserStreet(req.user);
+    if (!isStreetRelatedToEvent(event, userStreet)) {
+      return fail(res, 403, '您所在的街道无权操作此事件的时间线');
+    }
+  }
+
   const { action, description, data } = req.body;
   if (!action) return fail(res, 400, '动作为必填项');
   db.eventTimelines[req.params.id] = db.eventTimelines[req.params.id] || [];
