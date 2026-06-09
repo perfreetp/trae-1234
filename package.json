@@ -1,0 +1,28 @@
+{
+  "name": "digital-twin-city-emergency-backend",
+  "version": "1.0.0",
+  "description": "数字孪生城市应急联动后端服务 - 面向指挥大屏、街道值班端和巡查App",
+  "main": "src/app.js",
+  "scripts": {
+    "start": "node src/app.js",
+    "dev": "nodemon src/app.js"
+  },
+  "keywords": ["digital-twin", "emergency", "city", "backend"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "jsonwebtoken": "^9.0.2",
+    "bcryptjs": "^2.4.3",
+    "uuid": "^9.0.0",
+    "moment": "^2.29.4",
+    "geolib": "^3.3.4",
+    "swagger-ui-express": "^5.0.0",
+    "swagger-jsdoc": "^6.2.8"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  }
+}
